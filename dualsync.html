@@ -1,0 +1,1206 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DualSync</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #080a0f;
+      --surface: rgba(18, 22, 32, .84);
+      --surface-solid: #121620;
+      --surface-strong: #171d2a;
+      --line: rgba(167, 179, 204, .18);
+      --line-strong: rgba(167, 179, 204, .30);
+      --text: #f2f6ff;
+      --muted: #a7b3cc;
+      --soft: #707d96;
+      --accent: #8b5cf6;
+      --accent-rgb: 139, 92, 246;
+      --success: #34d399;
+      --warning: #f6c453;
+      --danger: #fb7185;
+      --shadow: 0 24px 80px rgba(0, 0, 0, .38);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(135deg, rgba(var(--accent-rgb), .18), transparent 34rem),
+        radial-gradient(circle at 88% 12%, rgba(52, 211, 153, .12), transparent 26rem),
+        linear-gradient(180deg, #0a0d14 0%, var(--bg) 62%);
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    button, input { font: inherit; }
+    button { -webkit-tap-highlight-color: transparent; }
+    h1, h2, h3, p { margin: 0; }
+
+    .shell {
+      width: min(1320px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 42px;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      align-items: center;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(13, 16, 24, .78);
+      backdrop-filter: blur(20px);
+      box-shadow: var(--shadow);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .logo {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, rgba(var(--accent-rgb), .95), rgba(var(--accent-rgb), .36));
+      border: 1px solid rgba(255, 255, 255, .2);
+      box-shadow: 0 0 36px rgba(var(--accent-rgb), .28);
+      flex: 0 0 auto;
+    }
+
+    .logo svg { width: 26px; height: 26px; }
+
+    h1 {
+      font-size: clamp(28px, 5vw, 48px);
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .theme-tools {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .theme-label, .sync-pill {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .sync-pill {
+      height: 38px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(8, 10, 15, .42);
+      white-space: nowrap;
+    }
+
+    .sync-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--warning);
+      box-shadow: 0 0 18px rgba(246, 196, 83, .6);
+    }
+
+    .sync-pill.online .sync-dot {
+      background: var(--success);
+      box-shadow: 0 0 18px rgba(52, 211, 153, .6);
+    }
+
+    .sync-pill.offline .sync-dot {
+      background: var(--danger);
+      box-shadow: 0 0 18px rgba(251, 113, 133, .6);
+    }
+
+    .swatch {
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      border: 1px solid var(--line-strong);
+      background: var(--swatch);
+      cursor: pointer;
+      position: relative;
+    }
+
+    .swatch.active::after {
+      content: "";
+      position: absolute;
+      inset: 9px;
+      border-radius: 4px;
+      border: 2px solid rgba(255, 255, 255, .9);
+    }
+
+    .hero-strip {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 280px;
+      gap: 16px;
+      align-items: stretch;
+      margin-top: 18px;
+    }
+
+    .daily-card, .sync-card, .person-card, .team-card, .history-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      backdrop-filter: blur(20px);
+      box-shadow: var(--shadow);
+    }
+
+    .daily-card {
+      padding: 18px;
+      display: grid;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .daily-top, .section-head, .challenge-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .eyebrow {
+      color: var(--accent);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      font-weight: 800;
+    }
+
+    .daily-message {
+      font-size: clamp(18px, 2.3vw, 25px);
+      line-height: 1.35;
+      max-width: 880px;
+      overflow-wrap: anywhere;
+    }
+
+    .icon-btn, .primary-btn, .ghost-btn, .tiny-btn {
+      border-radius: 8px;
+      border: 1px solid var(--line-strong);
+      color: var(--text);
+      background: var(--surface-strong);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .icon-btn { width: 42px; height: 42px; padding: 0; }
+    .primary-btn, .ghost-btn { height: 42px; padding: 0 12px; }
+    .tiny-btn { min-height: 34px; padding: 0 10px; color: var(--muted); }
+    .icon-btn svg, .primary-btn svg, .ghost-btn svg, .tiny-btn svg { width: 18px; height: 18px; flex: 0 0 auto; }
+
+    .primary-btn {
+      border-color: rgba(var(--accent-rgb), .5);
+      background: linear-gradient(135deg, rgba(var(--accent-rgb), .9), rgba(var(--accent-rgb), .55));
+      box-shadow: 0 12px 34px rgba(var(--accent-rgb), .24);
+    }
+
+    .ghost-btn:hover, .icon-btn:hover, .tiny-btn:hover {
+      border-color: rgba(var(--accent-rgb), .46);
+      color: var(--text);
+      background: rgba(var(--accent-rgb), .13);
+    }
+
+    .sync-card {
+      padding: 18px;
+      display: grid;
+      align-content: center;
+      gap: 10px;
+    }
+
+    .sync-number {
+      font-size: 42px;
+      line-height: 1;
+      font-weight: 850;
+    }
+
+    .sync-card p, .mini p, .history-list li span {
+      color: var(--muted);
+      line-height: 1.4;
+      font-size: 14px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    .person-card {
+      min-width: 0;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .person-head {
+      padding: 18px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 14px;
+      align-items: start;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(var(--accent-rgb), .09), transparent);
+    }
+
+    .name-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: rgba(var(--accent-rgb), .18);
+      border: 1px solid rgba(var(--accent-rgb), .4);
+      color: var(--accent);
+      font-weight: 850;
+      flex: 0 0 auto;
+    }
+
+    .name-input {
+      width: 100%;
+      min-width: 0;
+      background: transparent;
+      color: var(--text);
+      border: 0;
+      border-bottom: 1px solid transparent;
+      outline: none;
+      font-weight: 800;
+      font-size: 21px;
+      padding: 2px 0 4px;
+    }
+
+    .name-input:focus { border-color: rgba(var(--accent-rgb), .55); }
+
+    .head-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .progress-wrap { padding: 0 18px 18px; }
+
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 9px;
+    }
+
+    .progress-track {
+      height: 12px;
+      background: #232a38;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, .06);
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--success));
+      border-radius: inherit;
+      transition: width .26s ease;
+    }
+
+    .task-list, .challenge-list, .history-list {
+      list-style: none;
+      margin: 0;
+      padding: 18px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .task, .challenge, .history-list li {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(8, 10, 15, .44);
+    }
+
+    .task {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 12px;
+      align-items: center;
+      min-height: 56px;
+      padding: 10px 12px;
+    }
+
+    .check {
+      width: 24px;
+      height: 24px;
+      margin: 0;
+      accent-color: var(--accent);
+      cursor: pointer;
+      flex: 0 0 auto;
+    }
+
+    .task-text, .challenge-title {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      line-height: 1.35;
+    }
+
+    .task.done .task-text, .challenge.done .challenge-title {
+      color: var(--soft);
+      text-decoration: line-through;
+    }
+
+    .delete-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+    }
+
+    .delete-btn:hover {
+      color: #ffb4ad;
+      border-color: rgba(255, 123, 114, .32);
+      background: rgba(255, 123, 114, .08);
+    }
+
+    .delete-btn svg { width: 17px; height: 17px; }
+
+    .add-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      padding: 0 18px 18px;
+    }
+
+    .task-input {
+      min-width: 0;
+      height: 42px;
+      border-radius: 8px;
+      border: 1px solid var(--line-strong);
+      background: rgba(8, 10, 15, .62);
+      color: var(--text);
+      outline: none;
+      padding: 0 12px;
+    }
+
+    .task-input:focus {
+      border-color: rgba(var(--accent-rgb), .58);
+      box-shadow: 0 0 0 4px rgba(var(--accent-rgb), .14);
+    }
+
+    .lower-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(300px, .85fr);
+      gap: 18px;
+      margin-top: 18px;
+      align-items: start;
+    }
+
+    .team-card, .history-card { overflow: hidden; }
+    .section-head { padding: 18px 18px 0; }
+    .section-head h2 { font-size: 20px; }
+
+    .challenge {
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .challenge.done {
+      border-color: rgba(52, 211, 153, .35);
+      background: rgba(52, 211, 153, .08);
+    }
+
+    .challenge-checks {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .challenge-checks label {
+      min-height: 38px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 7px 9px;
+      background: rgba(18, 22, 32, .58);
+      overflow-wrap: anywhere;
+    }
+
+    .status-dock {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .mini {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(18, 22, 32, .72);
+      padding: 15px;
+      min-height: 112px;
+    }
+
+    .mini span {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      font-weight: 800;
+    }
+
+    .mini strong {
+      display: block;
+      margin-top: 10px;
+      font-size: 24px;
+    }
+
+    .history-list { max-height: 420px; overflow: auto; }
+
+    .history-list li {
+      padding: 12px;
+      display: grid;
+      gap: 5px;
+    }
+
+    .history-list li strong {
+      font-size: 14px;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+
+    .reaction-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 20;
+    }
+
+    .burst {
+      position: fixed;
+      left: var(--x);
+      top: var(--y);
+      font-size: 24px;
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(.75);
+      animation: floatBurst 1.65s ease-out forwards;
+      filter: drop-shadow(0 12px 22px rgba(var(--accent-rgb), .35));
+    }
+
+    @keyframes floatBurst {
+      0% { opacity: 0; transform: translate(-50%, -20%) scale(.72) rotate(0deg); }
+      18% { opacity: 1; }
+      100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-145% - var(--dy))) scale(1.45) rotate(var(--rot)); }
+    }
+
+    @media (max-width: 980px) {
+      .topbar, .hero-strip, .grid, .lower-grid, .status-dock { grid-template-columns: 1fr; }
+      .theme-tools { justify-content: flex-start; }
+    }
+
+    @media (max-width: 560px) {
+      .shell { width: min(100% - 22px, 1320px); padding-top: 12px; }
+      .topbar, .daily-card, .person-head { padding: 14px; }
+      .brand { align-items: flex-start; }
+      .logo { width: 42px; height: 42px; }
+      .person-head, .add-row, .challenge-checks { grid-template-columns: 1fr; }
+      .head-actions, .theme-tools { justify-content: stretch; }
+      .head-actions .ghost-btn, .add-row .primary-btn { width: 100%; }
+      .theme-label, .sync-pill { width: 100%; }
+      .task { grid-template-columns: auto 1fr auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="reaction-layer" id="reactionLayer" aria-hidden="true"></div>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 7h8a4 4 0 0 1 0 8H9" />
+            <path d="M16 17H8a4 4 0 0 1 0-8h7" />
+            <path d="M12 5v14" />
+          </svg>
+        </div>
+        <div>
+          <h1>DualSync</h1>
+          <p class="subtitle">Rutinas diarias compartidas, progreso independiente y sincronizacion cloud para dos personas.</p>
+        </div>
+      </div>
+      <div class="theme-tools" aria-label="Color de acento">
+        <span id="syncStatus" class="sync-pill"><span class="sync-dot"></span><span>Conectando</span></span>
+        <span class="theme-label">Acento</span>
+        <button class="swatch active" data-theme="violet" style="--swatch:#8b5cf6" type="button" aria-label="Violeta"></button>
+        <button class="swatch" data-theme="cyan" style="--swatch:#06b6d4" type="button" aria-label="Cian"></button>
+        <button class="swatch" data-theme="emerald" style="--swatch:#10b981" type="button" aria-label="Verde esmeralda"></button>
+      </div>
+    </header>
+
+    <section class="hero-strip">
+      <article class="daily-card">
+        <div class="daily-top">
+          <span id="dailyType" class="eyebrow">Mensaje del dia</span>
+          <button id="shuffleMessage" class="icon-btn" type="button" aria-label="Cambiar mensaje">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>
+          </button>
+        </div>
+        <p id="dailyMessage" class="daily-message"></p>
+      </article>
+      <article class="sync-card">
+        <span class="eyebrow">Sincronia total</span>
+        <strong id="globalProgress" class="sync-number">0%</strong>
+        <p>Promedio diario entre listas personales y retos de equipo.</p>
+      </article>
+    </section>
+
+    <section class="grid" aria-label="Paneles de tareas diarias">
+      <article class="person-card" data-person="personA">
+        <div class="person-head">
+          <div class="name-row">
+            <div class="avatar">A</div>
+            <input class="name-input" data-name-input="personA" value="Persona A" aria-label="Nombre persona A" />
+          </div>
+          <div class="head-actions">
+            <button class="ghost-btn" data-cheer="personB" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8"/></svg>
+              Enviar animo
+            </button>
+            <button class="ghost-btn" data-reset="personA" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 3v6h6"/></svg>
+              Reiniciar
+            </button>
+          </div>
+        </div>
+        <ul class="task-list" data-task-list="personA"></ul>
+        <div class="progress-wrap">
+          <div class="progress-meta"><span>Progreso diario</span><strong data-progress-label="personA">0%</strong></div>
+          <div class="progress-track"><div class="progress-fill" data-progress-fill="personA"></div></div>
+        </div>
+        <form class="add-row" data-add-form="personA">
+          <input class="task-input" type="text" placeholder="Añadir nueva tarea personalizada" autocomplete="off" />
+          <button class="primary-btn" type="submit">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+            Añadir
+          </button>
+        </form>
+      </article>
+
+      <article class="person-card" data-person="personB">
+        <div class="person-head">
+          <div class="name-row">
+            <div class="avatar">B</div>
+            <input class="name-input" data-name-input="personB" value="Persona B" aria-label="Nombre persona B" />
+          </div>
+          <div class="head-actions">
+            <button class="ghost-btn" data-cheer="personA" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8"/></svg>
+              Enviar animo
+            </button>
+            <button class="ghost-btn" data-reset="personB" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 3v6h6"/></svg>
+              Reiniciar
+            </button>
+          </div>
+        </div>
+        <ul class="task-list" data-task-list="personB"></ul>
+        <div class="progress-wrap">
+          <div class="progress-meta"><span>Progreso diario</span><strong data-progress-label="personB">0%</strong></div>
+          <div class="progress-track"><div class="progress-fill" data-progress-fill="personB"></div></div>
+        </div>
+        <form class="add-row" data-add-form="personB">
+          <input class="task-input" type="text" placeholder="Añadir nueva tarea personalizada" autocomplete="off" />
+          <button class="primary-btn" type="submit">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+            Añadir
+          </button>
+        </form>
+      </article>
+    </section>
+
+    <section class="lower-grid">
+      <article class="team-card">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Retos en equipo</span>
+            <h2>Completar juntos</h2>
+          </div>
+          <strong id="teamProgress">0%</strong>
+        </div>
+        <ul class="challenge-list" id="challengeList"></ul>
+      </article>
+
+      <article class="history-card">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Bitacora</span>
+            <h2>Actividad de hoy</h2>
+          </div>
+          <button id="clearLog" class="tiny-btn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>
+            Limpiar
+          </button>
+        </div>
+        <ul class="history-list" id="activityLog"></ul>
+      </article>
+    </section>
+
+    <section class="status-dock" aria-label="Resumen diario">
+      <article class="mini"><span>Tareas activas</span><strong id="activeTasks">0</strong><p>Elementos pendientes entre ambas personas.</p></article>
+      <article class="mini"><span>Racha de equipo</span><strong id="teamStreak">0 dias</strong><p>Dias consecutivos con todo completado.</p></article>
+      <article class="mini"><span>Racha A / B</span><strong id="personStreaks">0 / 0</strong><p>Constancia diaria independiente.</p></article>
+      <article class="mini"><span>Reinicio</span><strong id="resetDate">Hoy</strong><p>Las casillas se limpian solas cuando cambia el dia.</p></article>
+    </section>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'dualsync.state.v2';
+    const CLIENT_KEY = 'dualsync.client.id';
+    const DB_BOARD = 'dualsync_cloud_database';
+    const CLOUD_ID = 'shared';
+    const POLL_MS = 1300;
+    const NETWORK = location.pathname.split('/')[2];
+    const API_BASE = `/api/core/v1/networks/${encodeURIComponent(NETWORK)}`;
+    const LOGIN_URL = '/workspace/auth/login';
+    const today = () => new Date().toISOString().slice(0, 10);
+    const nowIso = () => new Date().toISOString();
+    const themes = {
+      violet: { accent: '#8b5cf6', rgb: '139, 92, 246' },
+      cyan: { accent: '#06b6d4', rgb: '6, 182, 212' },
+      emerald: { accent: '#10b981', rgb: '16, 185, 129' }
+    };
+    const defaults = ['Tomar agua', 'Dormir 8 horas', 'Comer', 'Hacer deberes'];
+    const defaultChallenges = ['Caminar 15 minutos juntos', 'Planificar el dia siguiente', 'Celebrar un avance del dia'];
+    const messages = [
+      ['Mensaje del dia', 'El progreso sostenible nace de tareas pequenas hechas con constancia. Marca lo importante y deja que DualSync lo sincronice.'],
+      ['Dato curioso', 'El cerebro consolida mejor la memoria despues de dormir: por eso una rutina de 8 horas ayuda tanto al aprendizaje.'],
+      ['Mensaje del dia', 'Una lista compartida no exige hacerlo todo igual; sirve para que cada persona vea su propio ritmo con claridad.'],
+      ['Dato curioso', 'Beber agua con regularidad puede mejorar la atencion sostenida, especialmente durante sesiones largas de estudio o trabajo.'],
+      ['Mensaje del dia', 'Terminar una tarea pequena reduce friccion para la siguiente. La barra de progreso existe para hacerlo visible.']
+    ];
+
+    const clientId = getClientId();
+    let state = loadLocalState();
+    let cloudRecordUpdatedAt = '';
+    let pollTimer = null;
+    let saveTimer = null;
+    let saving = false;
+    let pendingCloudSave = false;
+    let lastRenderedSignature = '';
+    const seenReactions = new Set(JSON.parse(localStorage.getItem('dualsync.seen.reactions') || '[]'));
+
+    resetIfNewDay(false);
+    applyTheme(state.theme);
+    renderAll();
+    startCloudSync();
+
+    function getClientId() {
+      let id = localStorage.getItem(CLIENT_KEY);
+      if (!id) {
+        id = crypto.randomUUID();
+        localStorage.setItem(CLIENT_KEY, id);
+      }
+      return id;
+    }
+
+    function seedTasks() {
+      return defaults.map((text) => ({ id: crypto.randomUUID(), text, done: false, preset: true }));
+    }
+
+    function seedChallenges() {
+      return defaultChallenges.map((text) => ({ id: crypto.randomUUID(), text, personA: false, personB: false }));
+    }
+
+    function createInitialState() {
+      return {
+        schema: 2,
+        date: today(),
+        theme: 'violet',
+        updatedAt: nowIso(),
+        completedDates: { team: [], personA: [], personB: [] },
+        people: {
+          personA: { name: 'Persona A', tasks: seedTasks() },
+          personB: { name: 'Persona B', tasks: seedTasks() }
+        },
+        challenges: seedChallenges(),
+        reactions: [],
+        log: []
+      };
+    }
+
+    function normalizeState(input) {
+      const base = createInitialState();
+      const next = { ...base, ...(input || {}) };
+      next.completedDates = { ...base.completedDates, ...(next.completedDates || {}) };
+      next.people = { ...base.people, ...(next.people || {}) };
+      Object.keys(base.people).forEach((id) => {
+        next.people[id] = { ...base.people[id], ...(next.people[id] || {}) };
+        if (!Array.isArray(next.people[id].tasks) || !next.people[id].tasks.length) next.people[id].tasks = seedTasks();
+      });
+      if (!Array.isArray(next.challenges) || !next.challenges.length) next.challenges = seedChallenges();
+      if (!Array.isArray(next.reactions)) next.reactions = [];
+      if (!Array.isArray(next.log)) next.log = [];
+      next.schema = 2;
+      return next;
+    }
+
+    function loadLocalState() {
+      try {
+        return normalizeState(JSON.parse(localStorage.getItem(STORAGE_KEY)));
+      } catch {
+        return createInitialState();
+      }
+    }
+
+    function persistLocal() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      localStorage.setItem('dualsync.seen.reactions', JSON.stringify([...seenReactions].slice(-80)));
+    }
+
+    async function apiFetch(path, options = {}) {
+      const response = await fetch(`${API_BASE}${path}`, {
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+        ...options
+      });
+      const data = await response.json().catch(() => null);
+      if (response.status === 401 || response.status === 403 || data?.error === 'Unauthorized') {
+        window.location.href = `${LOGIN_URL}?redirect=${encodeURIComponent(window.location.pathname)}`;
+        return null;
+      }
+      if (!response.ok) throw new Error(data?.error || `API error ${response.status}`);
+      return data;
+    }
+
+    async function executeAction(boardName, actionName, params = {}) {
+      return apiFetch(`/boards/${encodeURIComponent(boardName)}/actions/${encodeURIComponent(actionName)}`, {
+        method: 'POST',
+        body: JSON.stringify(params)
+      });
+    }
+
+    async function readCloudRecord() {
+      return executeAction(DB_BOARD, 'getItem', { id: CLOUD_ID });
+    }
+
+    async function writeCloudRecord() {
+      if (saving) {
+        pendingCloudSave = true;
+        return;
+      }
+      saving = true;
+      pendingCloudSave = false;
+      state.updatedAt = nowIso();
+      const updatedAt = state.updatedAt;
+      try {
+        const record = await executeAction(DB_BOARD, 'updateItem', {
+          id: CLOUD_ID,
+          record: { data: JSON.stringify(state), updatedAt, clientId }
+        });
+        cloudRecordUpdatedAt = record?.updatedAt || updatedAt;
+        setSyncStatus('online', 'Sincronizado');
+      } catch (error) {
+        setSyncStatus('offline', 'Sin conexion');
+      } finally {
+        saving = false;
+        if (pendingCloudSave) writeCloudRecord();
+      }
+    }
+
+    async function pullCloudState() {
+      try {
+        const record = await readCloudRecord();
+        if (!record) return;
+        cloudRecordUpdatedAt = record.updatedAt || '';
+        if (!record.data || record.data === '{}') {
+          markChanged('Estado inicial creado');
+          return;
+        }
+        const incoming = normalizeState(JSON.parse(record.data));
+        const incomingTime = Date.parse(incoming.updatedAt || record.updatedAt || 0);
+        const currentTime = Date.parse(state.updatedAt || 0);
+        if (incomingTime > currentTime && record.clientId !== clientId) {
+          state = incoming;
+          resetIfNewDay(false);
+          handleIncomingReactions();
+          applyTheme(state.theme);
+          renderAll(false);
+          persistLocal();
+        }
+        setSyncStatus('online', 'Sincronizado');
+      } catch (error) {
+        setSyncStatus('offline', 'Sin conexion');
+      }
+    }
+
+    function startCloudSync() {
+      pullCloudState().then(() => {
+        if (!cloudRecordUpdatedAt || cloudRecordUpdatedAt === '2026-08-19T00:00:00.000Z') scheduleCloudSave();
+      });
+      pollTimer = setInterval(() => {
+        if (!document.hidden) pullCloudState();
+      }, POLL_MS);
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) pullCloudState();
+    });
+
+    function setSyncStatus(kind, label) {
+      const pill = document.getElementById('syncStatus');
+      pill.classList.remove('online', 'offline');
+      if (kind) pill.classList.add(kind);
+      pill.querySelector('span:last-child').textContent = label;
+    }
+
+    function markChanged(message) {
+      state.updatedAt = nowIso();
+      if (message) addLog(message);
+      resetIfNewDay(false);
+      updateCompletionDates();
+      renderAll();
+      persistLocal();
+      scheduleCloudSave();
+    }
+
+    function scheduleCloudSave() {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(writeCloudRecord, 220);
+    }
+
+    function resetIfNewDay(shouldLog = true) {
+      const currentDay = today();
+      if (state.date === currentDay) return;
+      state.date = currentDay;
+      Object.values(state.people).forEach((person) => {
+        person.tasks.forEach((task) => task.done = false);
+      });
+      state.challenges.forEach((challenge) => {
+        challenge.personA = false;
+        challenge.personB = false;
+      });
+      state.log = [];
+      if (shouldLog) addLog('Nuevo dia iniciado. Las casillas se reiniciaron.');
+      state.updatedAt = nowIso();
+      persistLocal();
+      scheduleCloudSave();
+    }
+
+    function applyTheme(name) {
+      const theme = themes[name] || themes.violet;
+      document.documentElement.style.setProperty('--accent', theme.accent);
+      document.documentElement.style.setProperty('--accent-rgb', theme.rgb);
+      document.querySelectorAll('.swatch').forEach((button) => {
+        button.classList.toggle('active', button.dataset.theme === name);
+      });
+    }
+
+    function renderAll(shouldSave = true) {
+      const signature = JSON.stringify(state);
+      if (signature === lastRenderedSignature) return;
+      lastRenderedSignature = signature;
+      Object.keys(state.people).forEach(renderPerson);
+      renderChallenges();
+      renderDailyMessage();
+      renderSummary();
+      renderLog();
+      if (shouldSave) persistLocal();
+    }
+
+    function renderPerson(personId) {
+      const person = state.people[personId];
+      const list = document.querySelector(`[data-task-list="${personId}"]`);
+      const input = document.querySelector(`[data-name-input="${personId}"]`);
+      if (document.activeElement !== input) input.value = person.name;
+      list.innerHTML = person.tasks.map((task) => `
+        <li class="task ${task.done ? 'done' : ''}" data-task-id="${task.id}">
+          <input class="check" type="checkbox" ${task.done ? 'checked' : ''} aria-label="Completar ${escapeHtml(task.text)}" />
+          <span class="task-text">${escapeHtml(task.text)}</span>
+          <button class="delete-btn" type="button" aria-label="Eliminar tarea">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg>
+          </button>
+        </li>
+      `).join('');
+      updateProgress(personId);
+    }
+
+    function updateProgress(personId) {
+      const person = state.people[personId];
+      const total = person.tasks.length || 1;
+      const done = person.tasks.filter((task) => task.done).length;
+      const percent = Math.round((done / total) * 100);
+      document.querySelector(`[data-progress-label="${personId}"]`).textContent = `${percent}%`;
+      document.querySelector(`[data-progress-fill="${personId}"]`).style.width = `${percent}%`;
+    }
+
+    function renderChallenges() {
+      const list = document.getElementById('challengeList');
+      list.innerHTML = state.challenges.map((challenge) => {
+        const done = challenge.personA && challenge.personB;
+        return `
+          <li class="challenge ${done ? 'done' : ''}" data-challenge-id="${challenge.id}">
+            <div class="challenge-meta">
+              <strong class="challenge-title">${escapeHtml(challenge.text)}</strong>
+              <span class="eyebrow">${done ? 'Completo' : 'En curso'}</span>
+            </div>
+            <div class="challenge-checks">
+              <label><input class="check" data-team-person="personA" type="checkbox" ${challenge.personA ? 'checked' : ''}> ${escapeHtml(state.people.personA.name)}</label>
+              <label><input class="check" data-team-person="personB" type="checkbox" ${challenge.personB ? 'checked' : ''}> ${escapeHtml(state.people.personB.name)}</label>
+            </div>
+          </li>
+        `;
+      }).join('');
+    }
+
+    function renderDailyMessage(forceRandom = false) {
+      const base = forceRandom ? Math.floor(Math.random() * messages.length) : hashDate(state.date) % messages.length;
+      const [type, message] = messages[base];
+      document.getElementById('dailyType').textContent = type;
+      document.getElementById('dailyMessage').textContent = message;
+    }
+
+    function renderSummary() {
+      const people = Object.values(state.people);
+      const allTasks = people.flatMap((person) => person.tasks);
+      const doneTasks = allTasks.filter((task) => task.done).length;
+      const totalTasks = allTasks.length || 1;
+      const teamDone = state.challenges.filter((challenge) => challenge.personA && challenge.personB).length;
+      const teamTotal = state.challenges.length || 1;
+      const peoplePercent = doneTasks / totalTasks;
+      const teamPercent = teamDone / teamTotal;
+      const global = Math.round(((peoplePercent + teamPercent) / 2) * 100);
+      const active = allTasks.filter((task) => !task.done).length + (state.challenges.length - teamDone);
+      document.getElementById('globalProgress').textContent = `${global}%`;
+      document.getElementById('teamProgress').textContent = `${Math.round(teamPercent * 100)}%`;
+      document.getElementById('activeTasks').textContent = active;
+      document.getElementById('teamStreak').textContent = `${calculateStreak(state.completedDates.team)} dia${calculateStreak(state.completedDates.team) === 1 ? '' : 's'}`;
+      document.getElementById('personStreaks').textContent = `${calculateStreak(state.completedDates.personA)} / ${calculateStreak(state.completedDates.personB)}`;
+      document.getElementById('resetDate').textContent = new Date(state.date + 'T12:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+    }
+
+    function renderLog() {
+      const list = document.getElementById('activityLog');
+      const entries = state.log.filter((entry) => entry.date === state.date).slice(0, 24);
+      list.innerHTML = entries.length ? entries.map((entry) => `
+        <li><strong>${escapeHtml(entry.text)}</strong><span>${formatTime(entry.at)}</span></li>
+      `).join('') : '<li><strong>Sin actividad registrada todavia.</strong><span>Los cambios apareceran aqui en tiempo real.</span></li>';
+    }
+
+    function updateCompletionDates() {
+      ['personA', 'personB'].forEach((personId) => {
+        const tasks = state.people[personId].tasks;
+        const complete = tasks.length > 0 && tasks.every((task) => task.done);
+        setDatePresence(state.completedDates[personId], state.date, complete);
+      });
+      const peopleComplete = ['personA', 'personB'].every((personId) => state.completedDates[personId].includes(state.date));
+      const teamComplete = state.challenges.length > 0 && state.challenges.every((challenge) => challenge.personA && challenge.personB);
+      setDatePresence(state.completedDates.team, state.date, peopleComplete && teamComplete);
+    }
+
+    function setDatePresence(list, date, shouldInclude) {
+      const index = list.indexOf(date);
+      if (shouldInclude && index === -1) list.push(date);
+      if (!shouldInclude && index !== -1) list.splice(index, 1);
+      list.sort();
+      while (list.length > 90) list.shift();
+    }
+
+    function calculateStreak(dates) {
+      const set = new Set(dates || []);
+      let streak = 0;
+      const cursor = new Date(today() + 'T12:00:00');
+      while (set.has(cursor.toISOString().slice(0, 10))) {
+        streak += 1;
+        cursor.setDate(cursor.getDate() - 1);
+      }
+      return streak;
+    }
+
+    function addLog(text) {
+      state.log.unshift({ id: crypto.randomUUID(), date: state.date, at: nowIso(), text });
+      state.log = state.log.slice(0, 80);
+    }
+
+    function sendReaction(targetPerson) {
+      const sourcePerson = targetPerson === 'personA' ? 'personB' : 'personA';
+      const reaction = { id: crypto.randomUUID(), targetPerson, sourcePerson, at: nowIso(), clientId };
+      state.reactions.push(reaction);
+      state.reactions = state.reactions.slice(-40);
+      addLog(`${state.people[sourcePerson].name} envio animo a ${state.people[targetPerson].name}.`);
+      showReaction(targetPerson);
+      seenReactions.add(reaction.id);
+      markChanged();
+    }
+
+    function handleIncomingReactions() {
+      state.reactions.forEach((reaction) => {
+        if (reaction.clientId === clientId || seenReactions.has(reaction.id)) return;
+        seenReactions.add(reaction.id);
+        showReaction(reaction.targetPerson);
+      });
+    }
+
+    function showReaction(targetPerson) {
+      const card = document.querySelector(`[data-person="${targetPerson}"]`);
+      const rect = card?.getBoundingClientRect();
+      const centerX = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
+      const centerY = rect ? rect.top + rect.height / 2 : window.innerHeight / 2;
+      const layer = document.getElementById('reactionLayer');
+      const symbols = ['♥', '✦', '◆', '●', '♥', '✦'];
+      symbols.forEach((symbol, index) => {
+        const el = document.createElement('span');
+        el.className = 'burst';
+        el.textContent = symbol;
+        el.style.setProperty('--x', `${centerX + (Math.random() * 120 - 60)}px`);
+        el.style.setProperty('--y', `${centerY + (Math.random() * 60 - 20)}px`);
+        el.style.setProperty('--dx', `${Math.random() * 150 - 75}px`);
+        el.style.setProperty('--dy', `${80 + Math.random() * 110}px`);
+        el.style.setProperty('--rot', `${Math.random() * 90 - 45}deg`);
+        el.style.animationDelay = `${index * 55}ms`;
+        layer.appendChild(el);
+        setTimeout(() => el.remove(), 1900);
+      });
+    }
+
+    function hashDate(value) {
+      return value.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+    }
+
+    function formatTime(value) {
+      return new Date(value).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>'\"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char]);
+    }
+
+    document.querySelectorAll('.swatch').forEach((button) => {
+      button.addEventListener('click', () => {
+        state.theme = button.dataset.theme;
+        applyTheme(state.theme);
+        markChanged(`Acento cambiado a ${button.getAttribute('aria-label')}.`);
+      });
+    });
+
+    document.querySelectorAll('[data-name-input]').forEach((input) => {
+      input.addEventListener('change', () => {
+        const personId = input.dataset.nameInput;
+        state.people[personId].name = input.value.trim() || input.defaultValue;
+        markChanged(`Nombre actualizado: ${state.people[personId].name}.`);
+      });
+    });
+
+    document.querySelectorAll('[data-add-form]').forEach((form) => {
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const personId = form.dataset.addForm;
+        const input = form.querySelector('input');
+        const text = input.value.trim();
+        if (!text) return;
+        state.people[personId].tasks.push({ id: crypto.randomUUID(), text, done: false, preset: false });
+        input.value = '';
+        markChanged(`${state.people[personId].name} anadio: ${text}.`);
+      });
+    });
+
+    document.querySelectorAll('[data-task-list]').forEach((list) => {
+      list.addEventListener('click', (event) => {
+        const item = event.target.closest('[data-task-id]');
+        if (!item) return;
+        const personId = list.dataset.taskList;
+        const tasks = state.people[personId].tasks;
+        const task = tasks.find((entry) => entry.id === item.dataset.taskId);
+        if (!task) return;
+        if (event.target.matches('input')) {
+          task.done = event.target.checked;
+          markChanged(`${state.people[personId].name} ${task.done ? 'completo' : 'reabrio'}: ${task.text}.`);
+        }
+        if (event.target.closest('button')) {
+          state.people[personId].tasks = tasks.filter((entry) => entry.id !== task.id);
+          markChanged(`${state.people[personId].name} elimino: ${task.text}.`);
+        }
+      });
+    });
+
+    document.querySelectorAll('[data-reset]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const personId = button.dataset.reset;
+        state.people[personId].tasks.forEach((task) => task.done = false);
+        markChanged(`${state.people[personId].name} reinicio su panel.`);
+      });
+    });
+
+    document.querySelectorAll('[data-cheer]').forEach((button) => {
+      button.addEventListener('click', () => sendReaction(button.dataset.cheer));
+    });
+
+    document.getElementById('challengeList').addEventListener('change', (event) => {
+      const checkbox = event.target.closest('[data-team-person]');
+      const item = event.target.closest('[data-challenge-id]');
+      if (!checkbox || !item) return;
+      const challenge = state.challenges.find((entry) => entry.id === item.dataset.challengeId);
+      if (!challenge) return;
+      challenge[checkbox.dataset.teamPerson] = checkbox.checked;
+      const label = state.people[checkbox.dataset.teamPerson].name;
+      markChanged(`${label} marco reto: ${challenge.text}.`);
+    });
+
+    document.getElementById('clearLog').addEventListener('click', () => {
+      state.log = state.log.filter((entry) => entry.date !== state.date);
+      markChanged('Bitacora del dia limpiada.');
+    });
+
+    document.getElementById('shuffleMessage').addEventListener('click', () => renderDailyMessage(true));
+
+    window.addEventListener('beforeunload', () => {
+      if (saveTimer) writeCloudRecord();
+    });
+  </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"752856b75eff41b09fb434bda51535c8","r":1}' crossorigin="anonymous"></script>
+</body>
+</html>
